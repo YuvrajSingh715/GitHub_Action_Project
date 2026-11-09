@@ -51,16 +51,18 @@ jobs:
           name: myapp
           path: target/*.war
       # 6. Install SonarQube Scanner CLI
-      - name: Install SonarQube Scanner CLI
+      - name: Install SonarQube Server
         run: |
-          if [ ! -d "$HOME/sonar-scanner-cli" ]; then
-            echo "Downloading SonarQube Scanner CLI..."
-            wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-7.3.0.5189-linux-x64.zip -O /tmp/sonar-scanner.zip
-            unzip /tmp/sonar-scanner.zip -d $HOME
-            mv $HOME/sonar-scanner-7.3.0.5189-linux-x64 $HOME/sonar-scanner-cli
+          if [ ! -d "/opt/sonarqube" ]; then
+           echo "Extracting SonarQube Server..."
+
+           sudo unzip /tmp/sonarqube.zip -d /opt/
+
+          sudo mv /opt/sonarqube-26.11.0.134175 /opt/sonarqube
           fi
-          export PATH=$HOME/sonar-scanner-cli/bin:$PATH
-          sonar-scanner -v
+
+          echo "SonarQube Server installation completed!"
+          ls -ld /opt/sonarqube
       # 7. SonarQube analysis
       - name: SonarQube Analysis
         env:
