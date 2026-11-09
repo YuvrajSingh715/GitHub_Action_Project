@@ -1,3 +1,4 @@
+
 name: Java CI/CD Pipeline to Tomcat
 
 on:
@@ -30,6 +31,7 @@ jobs:
             echo "Maven is already installed"
           fi
           mvn -version
+
       # 4. Cache Maven dependencies
       - name: Cache Maven packages
         uses: actions/cache@v4
@@ -44,40 +46,46 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -DskipTests
 
-      # 6. Upload WAR as artifact (optional, for later jobs)
+      # 6. Upload WAR as artifact
       - name: Upload WAR artifact
         uses: actions/upload-artifact@v4
         with:
           name: myapp
           path: target/*.war
-      # 6. Install SonarQube Scanner CLI
+
+      # 7. Install SonarQube Server
       - name: Install SonarQube Server
         run: |
-         if [ ! -d "$HOME/sonarqube" ]; then
-           echo "Downloading SonarQube Server..."
+          if [ ! -d "$HOME/sonarqube" ]; then
+            echo "Downloading SonarQube Server..."
 
-          wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-26.11.0.134175.zip \
-           -O /tmp/sonarqube.zip
+            wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-26.11.0.134175.zip \
+              -O /tmp/sonarqube.zip
 
-         unzip /tmp/sonarqube.zip -d $HOME
+            unzip /tmp/sonarqube.zip -d $HOME
 
-         mv $HOME/sonarqube-26.11.0.134175 $HOME/sonarqube
-         fi
+            mv $HOME/sonarqube-26.11.0.134175 $HOME/sonarqube
+          fi
 
-         echo "SonarQube Server installation completed!"
-         ls -ld $HOME/sonarqube
-      # 7. SonarQube analysis
+          echo "SonarQube Server installation completed!"
+          ls -ld $HOME/sonarqube
+
+      # 8. SonarQube Analysis
       - name: SonarQube Analysis
         env:
           SONAR_HOST: ${{ secrets.SONAR_HOST }}
-          SONAR_LOGIN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          echo "SonarQube server URL: $SONAR_HOST"
-          curl -I $SONAR_HOST
+          echo "Checking SonarQube connectivity..."
+
+          curl -f "$SONAR_HOST/api/server/version"
+
+          echo "Starting SonarQube analysis..."
+
           mvn sonar:sonar \
-            -Dsonar.projectKey=in.reyaz:myapp \
-            -Dsonar.host.url=$SONAR_HOST \
-            -Dsonar.login=$SONAR_LOGIN
+            -Dsonar.projectKey=myapp \
+            -Dsonar.host.url="$SONAR_HOST" \
+            -Dsonar.token="$SONAR_TOKEN"
 
   deploy:
     runs-on: ubuntu-latest
@@ -85,20 +93,22 @@ jobs:
     environment: production
 
     steps:
-      # 7. Download WAR artifact
+      # 9. Download WAR artifact
       - name: Download WAR artifact
         uses: actions/download-artifact@v4
         with:
           name: myapp
 
-      # 8. Deploy WAR via Tomcat Manager
+      # 10. Deploy WAR via Tomcat Manager
       - name: Deploy to Tomcat
         run: |
           WAR_FILE=$(ls *.war)
           echo "Deploying $WAR_FILE to Tomcat..."
+
           curl -v --upload-file "$WAR_FILE" \
             "http://${{ secrets.TOMCAT_USER }}:${{ secrets.TOMCAT_PASSWORD }}@${{ secrets.TOMCAT_HOST }}/manager/text/deploy?path=/myapp&update=true"
-      # 9. Optional: verify deployment
+
+      # 11. Verify deployment
       - name: Verify deployment
         run: |
           curl -I http://${{ secrets.TOMCAT_HOST }}/myapp
