@@ -75,7 +75,7 @@ jobs:
           echo "SonarQube server URL: $SONAR_HOST"
           curl -I $SONAR_HOST
           mvn sonar:sonar \
-            -Dsonar.projectKey=hotstar \
+            -Dsonar.projectKey=in.reyaz:myapp \
             -Dsonar.host.url=$SONAR_HOST \
             -Dsonar.login=$SONAR_LOGIN
 
